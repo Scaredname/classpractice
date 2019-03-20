@@ -4,8 +4,8 @@
 """
 排序算法的可视化分析
 Author:MokeyDChaos
-Date:2019-03-16
-Version:2.0
+Date:2019-03-17
+Version:2.1
 """
 import random
 import matplotlib.pyplot as plt
@@ -17,27 +17,90 @@ def ShellSort(input_array):
     @input_array:输入数组
     """ 
     Length = len(input_array)
-    delt = [3,2,1]
+    delt = [13, 4, 3, 1]
     temp = 0
     k = 0
     for each in delt:
+        if each > Length:
+            continue
         for i in range(each):
             for j in range(i + each, Length, each):
                 if input_array[j] < input_array[j - each]:
                     temp = input_array[j]
                     for k in range( j - each, -2*each, -each):
-                        # 这里把c语言的for语句改过来的时候出现了问题，for是先执行语句再改变循环值再判断，range是直接得到所有符合规则的循环值 
-                        if temp < input_array[k]:
-                            input_array[k + each] = input_array[k]
-                        else:
-                            break
+                        # 这里把c语言的for语句改过来的时候出现了问题，for是先执行语句再改变循环值再判断，range是直接得到所有符合规则的循环值
+                        if k >= -Length: 
+                            if temp < input_array[k]:
+                                input_array[k + each] = input_array[k]
+                            else:
+                                break
                     input_array[k + each] = temp
         
 
 def MergeSort(input_array):
     """
     对数组进行归并排序
+    @input_array:输入数组
     """
+    Length = len(input_array)
+    def merge(wait_array, sort_array, first_add, cut_add, n):
+        """
+        将两个有序序列合并为一个
+        @wait_array:等待排序的数组
+        @sort_array:排好序的数组
+        @first_add:等待排序数组的起始索引值
+        @cut_add：切分数组的索引值
+        @n:数组长度
+        """
+        j = first_add
+        k = cut_add 
+        for i in range(j, n):
+            if j < cut_add  and k < n:
+                if wait_array[j] < wait_array[k]:
+                    sort_array[i] = wait_array[j]
+                    j += 1
+                else:
+                    sort_array[i] = wait_array[k]
+                    k += 1
+            else:
+                break
+            
+        while j < cut_add and i < n:
+            sort_array[i] = wait_array[j]
+            j += 1
+            i += 1
+        while k < n and i < n:   
+            sort_array[i] = wait_array[k]
+            i += 1
+            k += 1
+        
+    def Msort(wait_array, sort_array, n, l):
+        """
+        实现一次归并算法
+        @wait_array:待排序数组
+        @sort_array:排序数组
+        @n:数组长度
+        @l:子数组长度
+        """
+        i = 0
+        while n - i >= 2 * l:
+            merge(wait_array, sort_array, i, i + l, i + 2 * l )
+            i = i + 2 * l
+        if n - i > l:
+            merge(wait_array, sort_array, i, i + l, n)
+        else:
+            for j in range(i, n):
+                sort_array[j] = wait_array[j]
+
+    t = 1
+    sor_arr = []
+    for i in range(Length):
+        sor_arr.append(0)
+    while t < Length:
+        Msort(input_array, sor_arr, Length, t)
+        t = t * 2 
+        Msort(sor_arr, input_array, Length, t)
+        t = t *2  
 
 def QuickSort(input_array):
     """
@@ -137,8 +200,8 @@ def time_vis(func):
 
 def main():
     
-    # data = list(range(1000))
-    # data = random.sample(data, k = 1000)
+    # data = list(range(18))
+    # data = random.sample(data, k = 18)
     # print(data)
     # time_start = time.time()
     # ShellSort(data)
