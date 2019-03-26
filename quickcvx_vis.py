@@ -32,7 +32,6 @@ def GetLine(point1, point2):
     @point2:直线经过的另一个点
     @return：[A, B, C]
     """
-    # print(point1,point2,'hh')
     A = (point1[1] - point2[1])
     B = (point2[0] - point1[0])
     C = point1[0] * point2[1] - point1[1] * point2[0]
@@ -45,7 +44,7 @@ def PointDisLine(point, line):
     @point:点
     @line:线
     @return:距离 dis
-    """ 
+    """
     return (line[0] * point[0] + line[1] * point[1] + line[2]) / math.sqrt(line[0] * line[0] + line[1] * line[1])
 
 def PointDivison(point_set, line, cvxhu_point):
@@ -79,6 +78,7 @@ def PointSearch(point_set, line, cvxhu_point):
     max_point = (0, 0)
     for i in range(len(point_set)):
         dis = abs(PointDisLine(point_set[i], line))
+        print('point', point_set[i], 'dis', dis)
         if max_dis < dis:
             max_dis = dis
             max_point = point_set[i]
@@ -96,19 +96,23 @@ def CvxSearch(point_set, cvxhu_point):
     @cvxhu_point:凸包点集合
     """
     # 一定要注意python中赋值、浅拷贝、深拷贝之间的区别呀
+    print('1', point_set)
     flag = copy.copy(point_set)
     cvxhu_point1 = copy.copy(cvxhu_point)
     cvxhu_point2 = copy.copy(cvxhu_point)
+    Length = len(cvxhu_point)
     # 最初的划分线
-    base_line = GetLine(cvxhu_point[1], cvxhu_point[0])
+    base_line = GetLine(cvxhu_point1[Length-1], cvxhu_point1[Length-2])
     #感觉需要递归一下
-    while len(flag) >= 1:
+    while len(flag) >= 1 :
         print('flag:', flag)
         if len(flag) != 1:
+            # 问题在这
             fir_point = PointSearch(flag, base_line, cvxhu_point1)
             n = len(cvxhu_point1)
             base_line = GetLine(cvxhu_point1[n-2], cvxhu_point1[n-1])
             print('cv1-in0:', cvxhu_point1, 'fir:', fir_point, 'cvxhu_point', cvxhu_point1[n-2])
+            print('b_line', base_line)
             sub_po_set, sub_neg_set = PointDivison(flag, base_line, cvxhu_point1)
             print('po:', sub_po_set, 'neg', sub_neg_set)
             # 无法确定我们到底需要的是划分后左侧点集还是右侧点集，这里判断一下两个点集中分别一个点到原点的距离，并与直线到原点的距离比较，距离更远的就是我们需要的点集
@@ -126,26 +130,43 @@ def CvxSearch(point_set, cvxhu_point):
                     if PointDisLine(sub_neg_set[0], base_line) * PointDisLine(sub_neg_set[0], GetLine(cvxhu_point1[n-2], cvxhu_point1[n-3])) > 0:
                         flag = sub_neg_set
                     else:
-                        break
+                        flag = []
             else:
                 if len(sub_po_set):
                     if PointDisLine(sub_po_set[0], base_line) * PointDisLine(sub_po_set[0], GetLine(cvxhu_point1[n-2], cvxhu_point1[n-3])) > 0:
                         flag = sub_po_set
                     else:
-                        break
+                        flag = []
                 else:
-                    break 
+                    flag = [] 
         else:
             cvxhu_point1.append(flag[0])
             break
-        CvxVis(point_set, cvxhu_point1, cvxhu_point1[n-2], fir_point)
+        # CvxVis(point_set, cvxhu_point1, cvxhu_point1[n-2], fir_point)
+        rec_f = flag
+        # 突然间想到的方法，在递归前加一个值，卡住这么久只能说明我写的代码还是太少
+        # 再次失败
+        print('递归前的flag', flag)
+        if len(flag) > 1:
+            print('1开始递归')
+            print('递归前的rec', rec_f)
+            cvxhu_point1 = CvxSearch(rec_f, cvxhu_point1)
+            print('递归后的cv1', cvxhu_point1)
+            print('递归后的rec', rec_f)
+            print('递归后的flag', flag) 
+            # 递归后的flag不对,原因又出在了python这个赋值上，我们是需要使用赋值来通过递归更新我们的flag
+            # 这里我考虑加个值来控制递归，解决一下flag的问题
+        else:
+            flag = []
+    rec_f = flag 
+    print('cv1_out', cvxhu_point1)
     
     # 向另一个方向寻找
     # 这里出现新的问题，我们只有第一次是和间隔一个点的点相连，之后都是和上一个点相连
-    # 想了一下决定使用一个笨办法，加一个记录循环次数的数字，再进行判断    
+    # 想了一下决定使用一个笨办法，加一个记录循环次数的数字，再进行判断
+    print('2', point_set)    
     flag1 = copy.copy(point_set)
-    base_line1 = GetLine(cvxhu_point[1], cvxhu_point[0])
-    print(base_line, '1', base_line1)
+    base_line1 = GetLine(cvxhu_point2[Length-1], cvxhu_point2[Length-2])
     while len(flag1) >= 1:
         print('flag1:', flag1)
         if len(flag1) != 1:
@@ -155,11 +176,12 @@ def CvxSearch(point_set, cvxhu_point):
             # 笨办法
             if num == 1:
                 base_line1 = GetLine(cvxhu_point2[n-3], cvxhu_point2[n-1])
-                print('cv2-in0:', cvxhu_point1, 'fir:', fir_point, 'cvxhu_point2', cvxhu_point2[n-3])
+                print('cv2-in0:', cvxhu_point2, 'fir:', fir_point, 'cvxhu_point2', cvxhu_point2[n-3])
             else:
                 base_line1 = GetLine(cvxhu_point2[n-2], cvxhu_point2[n-1])
-                print('cv2-in0:', cvxhu_point1, 'fir:', fir_point, 'cvxhu_point2', cvxhu_point2[n-2])
+                print('cv2-in0:', cvxhu_point2, 'fir:', fir_point, 'cvxhu_point2', cvxhu_point2[n-2])
             sub1_po_set, sub1_neg_set = PointDivison(flag1, base_line1, cvxhu_point2)
+            n += 1
             print('po2:', sub1_po_set, 'neg2', sub1_neg_set)
             # 同上
             if len(sub1_neg_set):
@@ -174,21 +196,36 @@ def CvxSearch(point_set, cvxhu_point):
                     if PointDisLine(sub1_neg_set[0], base_line1) * PointDisLine(sub1_neg_set[0], GetLine(cvxhu_point2[n-2], cvxhu_point2[n-3])) < 0:
                         flag1 = sub1_neg_set
                     else:
-                        break
+                        flag1 = []
             else:
                 if len(sub1_po_set):
                     if PointDisLine(sub1_po_set[0], base_line1) * PointDisLine(sub1_po_set[0], GetLine(cvxhu_point2[n-2], cvxhu_point2[n-3])) < 0:
                         flag1 = sub1_po_set
                     else:
-                        break
+                        flag1 = []
                 else:
-                    print(sub1_neg_set, 'what', sub1_po_set)
+                    flag1 = []
 
         else:
             cvxhu_point2.append(flag1[0])
             break
-        CvxVis(point_set, cvxhu_point2, cvxhu_point2[n-3], fir_point)
-    
+        # if num == 1:
+        #     CvxVis(point_set, cvxhu_point2, cvxhu_point2[n-3], fir_point)
+        # else:
+        #     CvxVis(point_set, cvxhu_point2, cvxhu_point2[n-2], fir_point)
+        rec_f2 = flag
+        print('递归前的flag2', flag1)
+        if len(flag1) > 1:
+            print('2开始递归')
+            print('递归前的rec2', rec_f2)
+            cvxhu_point2 = CvxSearch(rec_f2, cvxhu_point2)
+            print('递归后的cv2', cvxhu_point2)
+            print('递归后的rec2', rec_f2)
+            print('递归后的flag2', flag1)
+        else:
+            flag1 = []           
+    print('cv2_out', cvxhu_point2)
+
     return list(set(cvxhu_point1 + cvxhu_point2))
  
 def CvxVis(point_set, cvxhu_point, point1 = None, point2 = None):
