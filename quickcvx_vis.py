@@ -88,8 +88,7 @@ def PointSearch(point_set, line, cvxhu_point):
     point_set.remove(max_point)
     return max_point
 
-
-def CvxSearch(point_set, cvxhu_point):
+def CvxSearchtry(point_set, point_set1, cvxhu_point):
     """
     在点集中寻找凸包点
     @point_set:坐标点
@@ -97,17 +96,90 @@ def CvxSearch(point_set, cvxhu_point):
     """
     # 一定要注意python中赋值、浅拷贝、深拷贝之间的区别呀
     print('1', point_set)
-    flag = copy.copy(point_set)
-    cvxhu_point1 = copy.copy(cvxhu_point)
-    cvxhu_point2 = copy.copy(cvxhu_point)
+    flag = point_set
+    flag1 = point_set1
+    print('f', flag)
+    print('f1', flag1)
     Length = len(cvxhu_point)
     # 最初的划分线
-    base_line = GetLine(cvxhu_point1[Length-1], cvxhu_point1[Length-2])
+    base_point= []
+    for i in range(2):
+        base_point.append(cvxhu_point[Length - 2 + i])
+    base_line = GetLine(cvxhu_point[Length-1], cvxhu_point[Length-2])
     #感觉需要递归一下
     while len(flag) >= 1 :
         print('flag:', flag)
         if len(flag) != 1:
-            # 问题在这
+            fir_point = PointSearch(flag, base_line, cvxhu_point)
+            num = 1
+            for each in base_point:
+                base_line = GetLine(each, fir_point)
+                print('cv-in0:', cvxhu_point)
+                # 这里加入两个flag，防止一次划分后将我们需要的点划去
+                if num == 1:
+                    num += 1
+                else:
+                    flag = flag1
+                sub_po_set, sub_neg_set = PointDivison(flag, base_line, cvxhu_point)
+                print('po:', sub_po_set, 'neg', sub_neg_set)
+                CvxVis(flag, cvxhu_point, fir_point, each)
+                # 使用距离之间是否同号来判断点在哪一侧
+                if len(sub_neg_set):
+                    if len(sub_po_set):
+                        print('sub_neg_set[0]', sub_neg_set[0], 'pdis1', PointDisLine(sub_neg_set[0], base_line), 'twopoint', cvxhu_point[Length-2], cvxhu_point[Length-3],\
+                            'pdis2', PointDisLine(sub_neg_set[0], GetLine(cvxhu_point[Length-2], cvxhu_point[Length-3])))
+                        # 使用距离的乘积的正负来判断哪一个点集是我们需要的
+                        if PointDisLine(sub_neg_set[0], base_line) * PointDisLine(sub_neg_set[0], GetLine(cvxhu_point[Length-2], cvxhu_point[Length-3])) < 0:
+                            flag = sub_neg_set
+                        elif PointDisLine(sub_neg_set[0], base_line) * PointDisLine(sub_neg_set[0], GetLine(cvxhu_point[Length-2], cvxhu_point[Length-3])) > 0:
+                            flag = sub_po_set
+                        else:
+                            print('程序错误点位于线上')
+                    else:
+                        if PointDisLine(sub_neg_set[0], base_line) * PointDisLine(sub_neg_set[0], GetLine(cvxhu_point[Length-2], cvxhu_point[Length-3])) > 0:
+                            flag = sub_neg_set
+                        else:
+                            flag = []
+                else:
+                    if len(sub_po_set):
+                        if PointDisLine(sub_po_set[0], base_line) * PointDisLine(sub_po_set[0], GetLine(cvxhu_point[Length-2], cvxhu_point[Length-3])) > 0:
+                            flag = sub_po_set
+                        else:
+                            flag = []
+                    else:
+                        flag = []
+                print('递归前的flag', flag)
+                print('qian f1', flag1)
+                if len(flag) > 1:
+                    print('1开始递归')
+                    CvxSearchtry(flag, flag1,cvxhu_point)
+                    print('递归后的cv', cvxhu_point)
+                    print('递归后的flag', flag) 
+        else:
+            cvxhu_point.append(flag[0])
+            break
+    print('cv_out', cvxhu_point)
+
+
+def CvxSearch(point_set, point_set1, cvxhu_point1, cvxhu_point2):
+    """
+    在点集中寻找凸包点
+    @point_set:坐标点
+    @cvxhu_point:凸包点集合
+    """
+    # 一定要注意python中赋值、浅拷贝、深拷贝之间的区别呀
+    flag = point_set
+    
+    # cvxhu_point1 = copy.copy(cvxhu_point)
+    # cvxhu_point2 = copy.copy(cvxhu_point)
+    Length = len(cvxhu_point1)
+    # 最初的划分线
+    base_line = GetLine(cvxhu_point1[Length-1], cvxhu_point1[Length-2])
+    #感觉需要递归一下
+    while len(flag) > 0 :
+        # while 不循环了不知道咋回事
+        print('flag:', flag)
+        if len(flag) != 1:
             fir_point = PointSearch(flag, base_line, cvxhu_point1)
             n = len(cvxhu_point1)
             base_line = GetLine(cvxhu_point1[n-2], cvxhu_point1[n-1])
@@ -115,6 +187,7 @@ def CvxSearch(point_set, cvxhu_point):
             print('b_line', base_line)
             sub_po_set, sub_neg_set = PointDivison(flag, base_line, cvxhu_point1)
             print('po:', sub_po_set, 'neg', sub_neg_set)
+            CvxVis(flag, cvxhu_point1, fir_point, cvxhu_point1[n-2])
             # 无法确定我们到底需要的是划分后左侧点集还是右侧点集，这里判断一下两个点集中分别一个点到原点的距离，并与直线到原点的距离比较，距离更远的就是我们需要的点集
             # 上面方法失败，尝试使用距离之间是否同号来判断点在哪一侧
             if len(sub_neg_set):
@@ -141,33 +214,40 @@ def CvxSearch(point_set, cvxhu_point):
                     flag = [] 
         else:
             cvxhu_point1.append(flag[0])
+            print('add')
             break
         # CvxVis(point_set, cvxhu_point1, cvxhu_point1[n-2], fir_point)
-        rec_f = flag
-        # 突然间想到的方法，在递归前加一个值，卡住这么久只能说明我写的代码还是太少
-        # 再次失败
-        print('递归前的flag', flag)
+        # 递归函数和人类的思维不一样，每次递归都要执行完所有的语句，所以当递归结束后还会将之前因为递归语句而无法执行的语句再次执行一遍。
+        print('当前的flag', flag)
+        point_set = flag
+        print('当前的pos', point_set)
         if len(flag) > 1:
             print('1开始递归')
-            print('递归前的rec', rec_f)
-            cvxhu_point1 = CvxSearch(rec_f, cvxhu_point1)
+            print('递归前的flag', flag)
+            point_set1 = copy.copy(flag)
+            # cvxhu_point2 = cvxhu_point1
+            print('递归前的pos1', point_set1)
+            cvxhu_point1 = CvxSearch(flag, point_set1, cvxhu_point1, cvxhu_point2)
+            # 现在问题集中在递归后得到的flag和pos1的值和我们预期得到的值不符，并且不知道哪里出问题了。
             print('递归后的cv1', cvxhu_point1)
-            print('递归后的rec', rec_f)
             print('递归后的flag', flag) 
+            print('递归后的pos1', point_set1)
             # 递归后的flag不对,原因又出在了python这个赋值上，我们是需要使用赋值来通过递归更新我们的flag
             # 这里我考虑加个值来控制递归，解决一下flag的问题
         else:
-            flag = []
-    rec_f = flag 
+            pass
+    print('跳出循环的flag', flag)
+    print('跳出循环的pos', point_set) 
     print('cv1_out', cvxhu_point1)
+    print('cv2_in', cvxhu_point2)
     
     # 向另一个方向寻找
     # 这里出现新的问题，我们只有第一次是和间隔一个点的点相连，之后都是和上一个点相连
-    # 想了一下决定使用一个笨办法，加一个记录循环次数的数字，再进行判断
-    print('2', point_set)    
-    flag1 = copy.copy(point_set)
-    base_line1 = GetLine(cvxhu_point2[Length-1], cvxhu_point2[Length-2])
-    while len(flag1) >= 1:
+    # 想了一下决定使用一个笨办法，加一个记录循环次数的数字，再进行判断   
+    flag1 = point_set1
+    Length1 = len(cvxhu_point2)
+    base_line1 = GetLine(cvxhu_point2[Length1-1], cvxhu_point2[Length1-2])
+    while len(flag1) > 0:
         print('flag1:', flag1)
         if len(flag1) != 1:
             num = 1
@@ -175,14 +255,19 @@ def CvxSearch(point_set, cvxhu_point):
             n = len(cvxhu_point2)
             # 笨办法
             if num == 1:
+                # 当进入递归后，有可能是需要跳过第一步。
                 base_line1 = GetLine(cvxhu_point2[n-3], cvxhu_point2[n-1])
                 print('cv2-in0:', cvxhu_point2, 'fir:', fir_point, 'cvxhu_point2', cvxhu_point2[n-3])
             else:
                 base_line1 = GetLine(cvxhu_point2[n-2], cvxhu_point2[n-1])
                 print('cv2-in0:', cvxhu_point2, 'fir:', fir_point, 'cvxhu_point2', cvxhu_point2[n-2])
             sub1_po_set, sub1_neg_set = PointDivison(flag1, base_line1, cvxhu_point2)
-            n += 1
             print('po2:', sub1_po_set, 'neg2', sub1_neg_set)
+            if num == 1:
+                CvxVis(flag1, cvxhu_point2, fir_point, cvxhu_point2[n-3])
+            else:
+                CvxVis(flag1, cvxhu_point2, fir_point, cvxhu_point2[n-2])
+            num += 1
             # 同上
             if len(sub1_neg_set):
                 if len(sub1_po_set):
@@ -213,17 +298,24 @@ def CvxSearch(point_set, cvxhu_point):
         #     CvxVis(point_set, cvxhu_point2, cvxhu_point2[n-3], fir_point)
         # else:
         #     CvxVis(point_set, cvxhu_point2, cvxhu_point2[n-2], fir_point)
-        rec_f2 = flag
-        print('递归前的flag2', flag1)
+        print('当前的flag1', flag1)
+        point_set1 = flag1
+        print('当前的pos1', point_set1)
         if len(flag1) > 1:
             print('2开始递归')
-            print('递归前的rec2', rec_f2)
-            cvxhu_point2 = CvxSearch(rec_f2, cvxhu_point2)
+            print('递归前的flag1', flag1)
+            point_set = copy.copy(flag1)
+            # cvxhu_point1 = cvxhu_point2
+            print('递归前的pos', point_set)
+            # 这里我们再加一个
+            cvxhu_point2 = CvxSearch(point_set, flag1, cvxhu_point1, cvxhu_point2)
             print('递归后的cv2', cvxhu_point2)
-            print('递归后的rec2', rec_f2)
-            print('递归后的flag2', flag1)
+            print('递归后的flag1', flag1)
+            print('递归后的pos', point_set)
         else:
-            flag1 = []           
+            pass           
+    print('跳出循环的flag1', flag1)
+    print('跳出循环的pos1', point_set1)
     print('cv2_out', cvxhu_point2)
 
     return list(set(cvxhu_point1 + cvxhu_point2))
@@ -255,7 +347,11 @@ def CvxVis(point_set, cvxhu_point, point1 = None, point2 = None):
     a.sort(key = SortList)
     b.sort(key = SortList, reverse = True )
     cvxhu_point = a + b
-    cvxhu_point.append(a[0])
+    # 使凸包相连
+    if len(a):
+        cvxhu_point.append(a[0])
+    else:
+        cvxhu_point.append(b[len(b)-1])
     for i in range(len(point_set)):
         p_x.append(point_set[i][0])
         p_y.append(point_set[i][1])
@@ -266,7 +362,8 @@ def CvxVis(point_set, cvxhu_point, point1 = None, point2 = None):
     plt.scatter(p_x, p_y, c = 'r', marker = 'x')
     plt.scatter(c_x, c_y, c = 'r')
     plt.plot(c_x, c_y, c = 'b')
-    plt.plot([point1[0], point2[0]], [point1[1], point2[1]],  c = 'g')
+    if point1:
+        plt.plot([point1[0], point2[0]], [point1[1], point2[1]],  c = 'g')
     plt.show()
 
 def main():
@@ -278,23 +375,40 @@ def main():
     for each in a:
         dis[each] = each[0] * each[0] + each[1] * each[1]
     print(dis)
-    sorted_dis=sorted(dis.items(),key=operator.itemgetter(1), reverse = True)
+    # sorted_dis=sorted(dis.items(),key=operator.itemgetter(1), reverse = True)
     # 找出离原点最远的两个点
-    print(sorted_dis)
-    for i in range(2):
-        cvxhu_point.append(sorted_dis[i][0])
-    first_line = GetLine(sorted_dis[0][0], sorted_dis[1][0])
+    def SortList(elem):
+        """
+        对列表进行排序
+        """
+        return elem[0]
+    # print(sorted_dis)
+    # for i in range(2):
+    #     cvxhu_point.append(sorted_dis[i][0])
+    # first_line = GetLine(sorted_dis[0][0], sorted_dis[1][0])
+    a.sort(key = SortList)
+    cvxhu_point = [a[0], a[len(a)-1]]
+    first_line = GetLine(a[0], a[len(a)-1])
     po_set, neg_set = PointDivison(a, first_line, cvxhu_point)
     print('正点集:', po_set, '负点集:', neg_set)
-    # 分别搜索正负点集中的凸包点
+    
     cvxhu_po = copy.copy(cvxhu_point)
-    po_hu = CvxSearch(po_set, cvxhu_po)
+    po_set1 = copy.copy(po_set)
+    # CvxSearchtry(po_set, po_set1, cvxhu_po)
     cvxhu_neg = copy.copy(cvxhu_point)
-    neg_hu = CvxSearch(neg_set, cvxhu_neg)
+    neg_set1= copy.copy(neg_set)
+    # CvxSearchtry(neg_set, neg_set1, cvxhu_neg)
+    # 分别搜索正负点集中的凸包点
+    cvxhu_po1 = copy.copy(cvxhu_point)
+    cvxhu_neg1 = copy.copy(cvxhu_point)
+    po_hu = CvxSearch(po_set, po_set1, cvxhu_po, cvxhu_neg)
+    print('开始负点集')
+    neg_hu = CvxSearch(neg_set, neg_set1, cvxhu_po1, cvxhu_neg1)
     # 合并两个凸包点集合
-    cvxhu_point = list(set(po_hu + neg_hu))
+    cvxhu_point = list(set(neg_hu + po_hu))
+
     print(cvxhu_point)
-    CvxVis(a, cvxhu_point, sorted_dis[0][0], sorted_dis[1][0])       
+    CvxVis(a, cvxhu_point, a[0], a[len(a)-1])       
 
 
 
