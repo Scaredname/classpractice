@@ -3,7 +3,7 @@
 """
 快速凸包算法的可视化分析
 Author:MokeyDChaos
-Date:2019-03-21
+Date:2019-03-229
 Version:1.0
 """
 import random
@@ -25,7 +25,7 @@ def GenerScatter(num):
     
     return random_sca_list
 
-def GetLine(point1, point2):
+def GetLine(point1, point2, flag = None):
     """
     求出过两点的直线Ax + By + C = 0
     @point1:直线经过的一个点
@@ -76,19 +76,99 @@ def PointSearch(point_set, line, cvxhu_point):
     """
     max_dis = 0
     max_point = (0, 0)
+    j = []
     for i in range(len(point_set)):
         dis = abs(PointDisLine(point_set[i], line))
         print('point', point_set[i], 'dis', dis)
         if max_dis < dis:
             max_dis = dis
             max_point = point_set[i]
+        # 如果为0说明它已经在凸包点集合中了
+        if dis == 0:
+            j.append(i)
     # 这里多个点相等的情况下我们是取数组中第一个点
         
     cvxhu_point.append(max_point)
+    if len(j):
+        point_set.remove(point_set[j[0]])
     point_set.remove(max_point)
     return max_point
 
-def CvxSearchtry(point_set, point_set1, cvxhu_point):
+def CvxSearchSm(point_set, cvxhu_point, line):
+    """
+    在点集中寻找凸包点
+    @point_set:坐标点
+    @cvxhu_point:凸包点集合
+    """
+    # 一定要注意python中赋值、浅拷贝、深拷贝之间的区别呀
+    print('1', point_set)
+    flag = point_set
+    print('f', flag)
+    base_line = GetLine(line[0], line[1])
+    fir_point = PointSearch(flag, base_line, cvxhu_point)
+    for i in range(len(line)):
+        print('lien', line)
+        line_set = [line[i], fir_point]
+        temp_line = GetLine(line[i], fir_point)
+        print('temp_line', line[i], fir_point)
+        # fir_point = PointSearch
+        judge_line =  GetLine(line[1 - i], line[i])
+        temp_flag = copy.copy(flag)
+        # 最初的划分线
+        print('before loop, t_f', temp_flag)
+        print('before loop, t_c', cvxhu_point)
+        while len(temp_flag) >= 1 :
+            sub_po_set, sub_neg_set = PointDivison(temp_flag, temp_line, cvxhu_point)
+            print('po:', sub_po_set, 'neg', sub_neg_set)
+            CvxVis(temp_flag, cvxhu_point, fir_point, line[i])
+            # 使用距离之间是否同号来判断点在哪一侧,一点注意让两个向量是首尾相连
+            if len(sub_neg_set):
+                if len(sub_po_set):
+                    print('sub_neg_set[0]', sub_neg_set[0], 'pdis1', PointDisLine(sub_neg_set[0], temp_line), \
+                        'pdis2', PointDisLine(sub_neg_set[0], judge_line))
+                    # 使用距离的乘积的正负来判断哪一个点集是我们需要的
+                    if PointDisLine(sub_neg_set[0], temp_line) * PointDisLine(sub_neg_set[0], judge_line)  > 0:
+                        temp_flag = sub_po_set
+                    elif PointDisLine(sub_neg_set[0], temp_line) * PointDisLine(sub_neg_set[0], judge_line)  < 0:
+                        temp_flag = sub_neg_set
+                    else:
+                        print('程序错误点位于线上')
+                else:
+                    if PointDisLine(sub_neg_set[0], temp_line) * PointDisLine(sub_neg_set[0], judge_line)  < 0:
+                        temp_flag = sub_neg_set
+                    else:
+                        temp_flag = []
+            else:
+                if len(sub_po_set):
+                    if PointDisLine(sub_po_set[0], temp_line) * PointDisLine(sub_po_set[0], judge_line)  < 0:
+                        temp_flag = sub_po_set
+                    else:
+                        temp_flag = []
+                else:
+                    temp_flag = []
+            # 这里因为flag的赋值不是实时受temp控制，所以加入判断防止错误点进入凸包集
+            if len(temp_flag) > 1:
+                print('开始递归')
+                print('递归前的t_c', cvxhu_point)
+                print('递归前的t_flag', temp_flag)
+                CvxSearchSm(temp_flag, cvxhu_point, line_set)
+                # 我也不知道为什么递归后temp_flag总是会还有值，那这里我们直接将递归后的flag赋值为空集
+                print('递归后的t_c', cvxhu_point)
+                print('递归后的t_flag', temp_flag)
+                # 递归后我们只需要一个为空的temp_flag
+                if len(list(set(cvxhu_point).intersection(flag))):
+                    temp_flag = []
+                print('赋值后的t_flag', temp_flag)
+                print('递归后的cv', cvxhu_point)
+            if len(temp_flag) == 1:
+                cvxhu_point.append(temp_flag[0])
+                temp_flag = []
+            print('出t_flag:', temp_flag)
+            print('出t_c:', cvxhu_point)
+    print('con_p',list(set(cvxhu_point)))
+    CvxVis(point_set, list(set(cvxhu_point)))
+
+def CvxSearchtry(point_set, point_set1, cvxhu_point, cvxhu_point1, line):
     """
     在点集中寻找凸包点
     @point_set:坐标点
@@ -100,65 +180,103 @@ def CvxSearchtry(point_set, point_set1, cvxhu_point):
     flag1 = point_set1
     print('f', flag)
     print('f1', flag1)
-    Length = len(cvxhu_point)
-    # 最初的划分线
-    base_point= []
+    base_line = line
     for i in range(2):
-        base_point.append(cvxhu_point[Length - 2 + i])
-    base_line = GetLine(cvxhu_point[Length-1], cvxhu_point[Length-2])
-    #感觉需要递归一下
-    while len(flag) >= 1 :
-        print('flag:', flag)
-        if len(flag) != 1:
-            fir_point = PointSearch(flag, base_line, cvxhu_point)
+        if i == 0:
+            temp_flag = flag
+            temp_cvxhu = cvxhu_point
+            Length = len(temp_cvxhu)
             num = 1
-            for each in base_point:
-                base_line = GetLine(each, fir_point)
-                print('cv-in0:', cvxhu_point)
-                # 这里加入两个flag，防止一次划分后将我们需要的点划去
-                if num == 1:
-                    num += 1
+        else:
+            temp_flag = flag1
+            temp_cvxhu = cvxhu_point1
+            Length = len(temp_cvxhu)
+            num = -1
+        # 最初的划分线
+        print('before loop, t_f', temp_flag)
+        print('before loop, t_c', temp_cvxhu)
+        while len(temp_flag) >= 1 :
+            Length = len(temp_cvxhu)
+            if len(temp_flag) != 1:
+                fir_point = PointSearch(temp_flag, base_line, temp_cvxhu)
+                if num == -1:
+                    base_line = GetLine(temp_cvxhu[Length - 2], fir_point)
+                    print('baseline', temp_cvxhu[Length - 2], fir_point)
+                    judge_line = GetLine(temp_cvxhu[Length-1], temp_cvxhu[Length-2])
+                    print('ju_line', temp_cvxhu[Length-1], temp_cvxhu[Length-2])
                 else:
-                    flag = flag1
-                sub_po_set, sub_neg_set = PointDivison(flag, base_line, cvxhu_point)
+                    base_line = GetLine(temp_cvxhu[Length - 1], fir_point)
+                    print('baseline', temp_cvxhu[Length - 1], fir_point)
+                    judge_line = GetLine(temp_cvxhu[Length-2], temp_cvxhu[Length-1])
+                    print('ju_line', temp_cvxhu[Length-2], temp_cvxhu[Length-1])
+                sub_po_set, sub_neg_set = PointDivison(temp_flag, base_line, temp_cvxhu)
                 print('po:', sub_po_set, 'neg', sub_neg_set)
-                CvxVis(flag, cvxhu_point, fir_point, each)
-                # 使用距离之间是否同号来判断点在哪一侧
+                if num == -1:
+                    CvxVis(temp_flag, temp_cvxhu, fir_point, temp_cvxhu[Length - 2])
+                else:
+                    CvxVis(temp_flag, temp_cvxhu, fir_point, temp_cvxhu[Length - 1])
+                # 使用距离之间是否同号来判断点在哪一侧,一点注意让两个向量是首尾相连
                 if len(sub_neg_set):
                     if len(sub_po_set):
-                        print('sub_neg_set[0]', sub_neg_set[0], 'pdis1', PointDisLine(sub_neg_set[0], base_line), 'twopoint', cvxhu_point[Length-2], cvxhu_point[Length-3],\
-                            'pdis2', PointDisLine(sub_neg_set[0], GetLine(cvxhu_point[Length-2], cvxhu_point[Length-3])))
+                        print('sub_neg_set[0]', sub_neg_set[0], 'pdis1', PointDisLine(sub_neg_set[0], base_line), 'twopoint', temp_cvxhu[Length-1], temp_cvxhu[Length-2],\
+                            'pdis2', PointDisLine(sub_neg_set[0], judge_line), 't_cv', temp_cvxhu)
                         # 使用距离的乘积的正负来判断哪一个点集是我们需要的
-                        if PointDisLine(sub_neg_set[0], base_line) * PointDisLine(sub_neg_set[0], GetLine(cvxhu_point[Length-2], cvxhu_point[Length-3])) < 0:
-                            flag = sub_neg_set
-                        elif PointDisLine(sub_neg_set[0], base_line) * PointDisLine(sub_neg_set[0], GetLine(cvxhu_point[Length-2], cvxhu_point[Length-3])) > 0:
-                            flag = sub_po_set
+                        if PointDisLine(sub_neg_set[0], base_line) * PointDisLine(sub_neg_set[0], judge_line)  > 0:
+                            temp_flag = sub_po_set
+                        elif PointDisLine(sub_neg_set[0], base_line) * PointDisLine(sub_neg_set[0], judge_line)  < 0:
+                            temp_flag = sub_neg_set
                         else:
                             print('程序错误点位于线上')
                     else:
-                        if PointDisLine(sub_neg_set[0], base_line) * PointDisLine(sub_neg_set[0], GetLine(cvxhu_point[Length-2], cvxhu_point[Length-3])) > 0:
-                            flag = sub_neg_set
+                        if PointDisLine(sub_neg_set[0], base_line) * PointDisLine(sub_neg_set[0], judge_line)  < 0:
+                            temp_flag = sub_neg_set
                         else:
-                            flag = []
+                            temp_flag = []
                 else:
                     if len(sub_po_set):
-                        if PointDisLine(sub_po_set[0], base_line) * PointDisLine(sub_po_set[0], GetLine(cvxhu_point[Length-2], cvxhu_point[Length-3])) > 0:
-                            flag = sub_po_set
+                        if PointDisLine(sub_po_set[0], base_line) * PointDisLine(sub_po_set[0], judge_line)  < 0:
+                            temp_flag = sub_po_set
                         else:
-                            flag = []
+                            temp_flag = []
                     else:
+                        temp_flag = []
+                print(num, '出t_flag:', temp_flag)
+                print(num, '出t_c:', temp_cvxhu)
+                # 这里因为flag的赋值不是实时受temp控制，所以加入判断防止错误点进入凸包集
+                if len(temp_flag) == 0 and len(flag1) == 1 and len(flag) == 1:
+                    flag = []
+                    flag1 = []
+                print(num, 'f1:', flag1)
+                print(num, 'f:', flag)
+                if len(temp_flag) > 1:
+                    print('开始递归')
+                    print('递归前的t_c', temp_cvxhu)
+                    print('递归前的t_flag', temp_flag)
+                    print('递归前的flag', flag)
+                    print('递归前的flag1', flag1)
+                    print('递归前的cv', cvxhu_point)
+                    print('递归前的cv2', cvxhu_point1)
+                    CvxSearchtry(temp_flag, temp_flag, temp_cvxhu, temp_cvxhu, base_line)
+                    # 我也不知道为什么递归后temp_flag总是会还有值，那这里我们直接将递归后的flag赋值为空集
+                    print('递归后的t_c', temp_cvxhu)
+                    print('递归后的t_flag', temp_flag)
+                    # 递归后我们只需要一个为空的temp_flag
+                    if num == 1 and len(list(set(cvxhu_point).intersection(flag))):
                         flag = []
-                print('递归前的flag', flag)
-                print('qian f1', flag1)
-                if len(flag) > 1:
-                    print('1开始递归')
-                    CvxSearchtry(flag, flag1,cvxhu_point)
+                        temp_flag = []
+                    elif num == -1 and len(list(set(cvxhu_point1).intersection(flag1))):
+                        flag1 = []
+                        temp_flag = []
+                    print('赋值后的t_flag', temp_flag)
+                    print('递归后的flag', flag)
+                    print('递归后的flag1', flag1)
                     print('递归后的cv', cvxhu_point)
-                    print('递归后的flag', flag) 
-        else:
-            cvxhu_point.append(flag[0])
-            break
-    print('cv_out', cvxhu_point)
+                    print('递归后的cv2', cvxhu_point1) 
+            else:
+                temp_cvxhu.append(temp_flag[0])
+                break
+    print('con_p',list(set(cvxhu_point + cvxhu_point1)))
+    CvxVis(point_set, list(set(cvxhu_point + cvxhu_point1)))
 
 
 def CvxSearch(point_set, point_set1, cvxhu_point1, cvxhu_point2):
@@ -391,7 +509,10 @@ def main():
     first_line = GetLine(a[0], a[len(a)-1])
     po_set, neg_set = PointDivison(a, first_line, cvxhu_point)
     print('正点集:', po_set, '负点集:', neg_set)
-    
+    b = [(-90, -95), (-15, -28), (23, -72), (41, -90), (73, 34), (85, -31)]
+    b_c = [(-97, -95), (91, 73)]
+    b1 = copy.copy(b)
+    b_c1 = copy.copy(b_c)
     cvxhu_po = copy.copy(cvxhu_point)
     po_set1 = copy.copy(po_set)
     # CvxSearchtry(po_set, po_set1, cvxhu_po)
@@ -401,14 +522,19 @@ def main():
     # 分别搜索正负点集中的凸包点
     cvxhu_po1 = copy.copy(cvxhu_point)
     cvxhu_neg1 = copy.copy(cvxhu_point)
-    po_hu = CvxSearch(po_set, po_set1, cvxhu_po, cvxhu_neg)
-    print('开始负点集')
-    neg_hu = CvxSearch(neg_set, neg_set1, cvxhu_po1, cvxhu_neg1)
+    # po_hu = CvxSearch(po_set, po_set1, cvxhu_po, cvxhu_neg)
+    # print('开始负点集')
+    # neg_hu = CvxSearch(neg_set, neg_set1, cvxhu_po1, cvxhu_neg1)
+    # CvxSearchtry(po_set, po_set1, cvxhu_po, cvxhu_neg)
+    # CvxSearchtry(neg_set, neg_set1, cvxhu_po1, cvxhu_neg1)
+    # CvxSearchtry(b, b1, b_c, b_c1, GetLine(b_c[0], b_c[1]))
+    CvxSearchSm(po_set, cvxhu_po, cvxhu_po1)
+    CvxSearchSm(neg_set, cvxhu_neg, cvxhu_neg1)
+    # CvxSearchSm(b, b_c, b_c1)
     # 合并两个凸包点集合
-    cvxhu_point = list(set(neg_hu + po_hu))
-
+    cvxhu_point = list(set(cvxhu_po + cvxhu_neg))
     print(cvxhu_point)
-    CvxVis(a, cvxhu_point, a[0], a[len(a)-1])       
+    CvxVis(a, cvxhu_point)       
 
 
 
