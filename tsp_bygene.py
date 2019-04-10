@@ -3,40 +3,44 @@
 """
 tsp问题的遗传算法
 Author:MokeyDChaos
-Date:2019-04-01
-Version:1.0
+Date:2019-04-10
+Version:2.0
 """
 import random
 import copy
+import math
+import matplotlib.pyplot as plt
 
 def GenerateCity(n):
     """
-    生成一个n个点的完全图
+    生成n个随机坐标的城市图
     @n:tsp问题中的城市的数量
-    @return:存有距离的二维数组，和一个记录着城市之间距离的字典
+    @return:存有距离的二维数组，记录城市位置的数组
     """
+    city = []
+    for k in range(n):
+        city.append((random.randint(-100, 100), random.randint(-100, 100)))
     city_dis = []
     city_dis_temp = []
-    city_map = {}
     for i in range(n):
         city_dis_temp = []
         for j in range(i, n):
             if i == j:
-                random_dis = 0
+                dis = 0
             else:
-                random_dis = random.randint(1, 11)
-            city_dis_temp.append(random_dis)
-            city_map['%d-%d'%(i, j)] = random_dis
-            city_map['%d-%d'%(j, i)] = random_dis
+                dis = (city[j][0] - city[i][0]) * (city[j][0] - city[i][0]) + (city[j][1] - city[i][1]) * (city[j][1] - city[i][1]) 
+            city_dis_temp.append(dis)
+            # city_map['城市%d-%d的距离'%(i, j)] = random_dis
+            # city_map['城市%d-%d的距离'%(j, i)] = random_dis
 
         for l in range(i - 1, -1, -1):
             city_dis_temp.insert(0, city_dis[l][i])
         city_dis.append(city_dis_temp)
-    return city_dis, city_map
+    return city_dis, city
     
 def GenerateRace(m, n):
     """
-    生成一个拥有n个个体的种群
+    生成一个拥有m个个体的种群
     @m:种群个体的数量
     @n:每个个体的长度
     @return:返回一个种族 
@@ -62,9 +66,9 @@ def FitnessFunction(individual, dis):
     for i in range(len(individual) - 1):
         sum_dis = sum_dis + dis[individual[i]][individual[i+1]]
     # 在tsp问题中我们希望路径越短越好，遗传算法中希望适应度越高越好，所以应该是路径越小适应度越高
-    # 所以我用城市间的最大距离*城市数目-路劲长度来表示适应度
-    # 最大距离在生成tsp问题时就已经设置
-    fitness_score = 11 * len(individual) - sum_dis
+    # 所以我用两个max寻找城市间的近似最大距离*城市数目-路劲长度来表示适应度
+    # 近似最大距离在生成城市图时相当于是一个定值
+    fitness_score = max(max(dis)) * len(individual) - sum_dis
     return fitness_score
 
 def FitnessScore(race, dis):
@@ -233,41 +237,83 @@ def UpdateRace(race, dis):
     for each in var_pos:
         GeneVar(new_race[each])
 
-    return new_race 
+    return new_race
+
+def TwoExNeigh(best_individual, best_individual_fitness, n, dis):
+    """
+    二交换后得到的领域
+    @best_individual:通过遗传法得到的最优个体
+    @best_individual_fitness:个体的适应度
+    @n:二交换的次数
+    @dis:城市间距离数组
+    @return:最优个体的领域
+    """
+    neigh_area = []
+    score_area = []
+    Length = len(best_individual)
+    new_individual = copy.copy(best_individual)
+    for i in range(n):
+        a = random.randint(0, Length - 1)
+        index1 = a
+        best_individual[a], best_individual[Length - 1] = best_individual[Length - 1], best_individual[a]
+        b = random.randint(0, Length - 2)
+        index2 = new_individual.index(best_individual[b])
+        new_individual[index1], new_individual[index2] = new_individual[index2], new_individual[index1]
+        new_individual_score = FitnessFunction(new_individual, dis)
+        if new_individual_score > best_individual_fitness:
+            neigh_area.append(new_individual)
+            score_area.append(math.sqrt(max(max(dis)) * Length - new_individual_score))
+    
+    return neigh_area, score_area
+
+def PathVisible(individual, city):
+    """
+    将tsp问题可视化
+    @individual:路径
+    @city:城市坐标
+    """
+    city_x = []
+    city_y = []
+    for each in individual:
+        city_x.append(city[each][0])
+        city_y.append(city[each][1])
+    
+    plt.scatter(city_x, city_y, c = 'r')
+    plt.plot(city_x, city_y, c = 'b')
+    plt.show()
+
 
 def main():
-    dis, c_map = GenerateCity(10)
-    # print(dis)
-    # print('1-9', dis[0][8])
-    race = GenerateRace(10, len(dis))
-    # new_race = UpdateRace(race, dis)
-    # print(new_race)
-    # fit_score = []
-    # for each in fir_race:
-    #     fit_score.append(FitnessFunction(each, dis))
-    # print('score', fit_score)
+    dis, city_map = GenerateCity(50)
+    # print('max dis', max(max(dis)))
+    # print('dis', dis, 'c_m', city_map)
+    # dis = [[0, 1125, 5513, 15041, 980, 28565, 754, 34, 37577, 10397], [1125, 0, 10676, 19652, 4121, 36260, 1873, 1297, 47048, 16976], [5513, 10676, 0, 4640, 3637, 10312, 8665, 4825, 15188, 772], [15041, 19652, 4640, 0, 14845, 2824, 21905, 13649, 6660, 3316], [980, 4121, 3637, 14845, 0, 26073, 1258, 986, 33685, 7569], [28565, 36260, 10312, 2824, 26073, 0, 36901, 26693, 820, 6084], [754, 1873, 8665, 21905, 1258, 36901, 0, 1088, 46517, 14545], [34, 1297, 4825, 13649, 986, 26693, 1088, 0, 35477, 9425], [37577, 47048, 15188, 6660, 33685, 820, 46517, 35477, 0, 9448], [10397, 16976, 772, 3316, 7569, 6084, 14545, 9425, 9448, 0]]
+    # city_map = [(67, -67), (100, -61), (0, -35), (-4, 33), (39, -81), (-54, 51), (72, -94), (64, -62), (-82, 57), (-24, -21)]
+    race = GenerateRace(100, len(dis))
     generation = 0
     while True:
         generation = generation + 1
-        print('start')
         race = UpdateRace(race, dis)
-        print('new race appeared')
-        if generation == 100:
-            race_100 = race
+        if generation == 10000:
+            race_final = race
             break
         else:
             continue
-    temp_score = FitnessScore(race_100, dis)
-    print(FitnessScore(race_100, dis))
-    best_one =  race_100[temp_score.index(max(temp_score))]
-    print(best_one, '长度：', 11 * len(temp_score) - max(temp_score))
+    temp_score = FitnessScore(race_final, dis)
+    best_one =  race_final[temp_score.index(max(temp_score))]
+    appro_min_dis = math.sqrt(max(max(dis)) * len(race_final[0]) - max(temp_score))
+    print(best_one, '长度：', appro_min_dis)
+    PathVisible(best_one, city_map)
+    
+    ne_area, ne_area_score = TwoExNeigh(best_one, max(temp_score), 1000, dis)
+    print('通过二交换得到的长度为', ne_area_score)
+    if len(ne_area) != 0:
+        print('进行二交换')
+        temp_index = ne_area_score.index(min(ne_area_score))
+        print('index', temp_index)
+        print('path', ne_area[temp_index])
+        PathVisible(ne_area[temp_index], city_map)
+    
 
-    # child1, child2 = GeneCycleCross([1,2,3,4,5,6,7,8], [2,4,6,8,7,5,3,1])
-    # child1, child2 = GenePosCross([1,2,3,4,5,6,7,8], [2,4,6,8,7,5,3,1])
-    # print(child1, 'other', child2)
-    # GeneVar(child1)
-    # print('after var', child1)
-    # result = Roulette([10,30,90,100,150,260], 3, repeat = False)
-    # print(result)
 if __name__ == "__main__":
     main()
