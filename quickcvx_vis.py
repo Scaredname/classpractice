@@ -3,14 +3,15 @@
 """
 快速凸包算法的可视化分析
 Author:MokeyDChaos
-Date:2019-03-29
-Version:1.0
+Date:2019-04-15
+Version:1.1
 """
 import random
 import math
 import operator
 import matplotlib.pyplot as plt
 import copy
+import time
 
 def SortList(elem):
         """
@@ -85,7 +86,7 @@ def PointSearch(point_set, line, cvxhu_point):
     j = []
     for i in range(len(point_set)):
         dis = abs(PointDisLine(point_set[i], line))
-        print('point', point_set[i], 'dis', dis)
+        # print('point', point_set[i], 'dis', dis)
         if max_dis < dis:
             max_dis = dis
             max_point = point_set[i]
@@ -108,9 +109,7 @@ def CvxSearchSm(point_set, cvxhu_point, line):
     @line:存放寻找基线经过的两个点的数组
     """
     # 一定要注意python中赋值、浅拷贝、深拷贝之间的区别呀
-    print('1', point_set)
     flag = point_set
-    print('f', flag)
     # 最初的基线
     base_line = GetLine(line[0], line[1])
     fir_point = PointSearch(flag, base_line, cvxhu_point)
@@ -146,21 +145,21 @@ def CvxSearchSm(point_set, cvxhu_point, line):
                         temp_flag = []
                 else:
                     temp_flag = []
+            CvxVis(flag, list(set(cvxhu_point)), line[i], fir_point, temp_flag)
             # 这里因为flag的赋值不是实时受temp控制，所以加入判断防止错误点进入凸包集
             if len(temp_flag) > 1:
-                print('开始递归')
+                # print('开始递归')
                 CvxSearchSm(temp_flag, cvxhu_point, line_set)
-                # 递归后因为递归函数会继续执行之前不成立判断下的内容太，这里判断如果要搜索的点集已经存在于凸包集合我们就将搜索点集赋值为空集
+                # 递归后因为递归函数会继续执行之前不成立判断下的内容，这里判断如果要搜索的点集已经存在于凸包集合我们就将搜索点集赋值为空集
                 if len(list(set(cvxhu_point).intersection(flag))):
                     temp_flag = []
             if len(temp_flag) == 1:
                 cvxhu_point.append(temp_flag[0])
                 temp_flag = []
-    CvxVis(point_set, list(set(cvxhu_point)))
 
 
  
-def CvxVis(point_set, cvxhu_point, point1 = None, point2 = None):
+def CvxVis(point_set, cvxhu_point = None, point1 = None, point2 = None, marked_pointset = None):
     """
     将凸包可视化，用来检验算法正确性
     @point_set:坐标点
@@ -173,37 +172,95 @@ def CvxVis(point_set, cvxhu_point, point1 = None, point2 = None):
     c_y = []
     a = []
     b = []
+    mk_x = []
+    mk_y = []
     # 这里对凸包点集重新排列方便可视化检验程序正确性
-    for each in cvxhu_point:
-        if each[1] > 0:
-            a.append(each)
+    if cvxhu_point:
+        for each in cvxhu_point:
+            if each[1] > 0:
+                a.append(each)
+            else:
+                b.append(each)
+        a.sort(key = SortList)
+        b.sort(key = SortList, reverse = True )
+        cvxhu_point = a + b
+        # 使凸包相连
+        if len(a):
+            cvxhu_point.append(a[0])
         else:
-            b.append(each)
-    a.sort(key = SortList)
-    b.sort(key = SortList, reverse = True )
-    cvxhu_point = a + b
-    # 使凸包相连
-    if len(a):
-        cvxhu_point.append(a[0])
-    else:
-        cvxhu_point.append(b[len(b)-1])
+            cvxhu_point.append(b[len(b)-1])
+        
+        for i in range(len(cvxhu_point)):
+            c_x.append(cvxhu_point[i][0])
+            c_y.append(cvxhu_point[i][1])
+        plt.scatter(c_x, c_y, c = 'r')
+        plt.plot(c_x, c_y, c = 'b')
+
     for i in range(len(point_set)):
         p_x.append(point_set[i][0])
         p_y.append(point_set[i][1])
-    for i in range(len(cvxhu_point)):
-        c_x.append(cvxhu_point[i][0])
-        c_y.append(cvxhu_point[i][1])
 
     plt.scatter(p_x, p_y, c = 'r', marker = 'x')
-    plt.scatter(c_x, c_y, c = 'r')
-    plt.plot(c_x, c_y, c = 'b')
     if point1:
         plt.plot([point1[0], point2[0]], [point1[1], point2[1]],  c = 'g')
+    
+    if marked_pointset:
+        for i in range(len(marked_pointset)):
+            mk_x.append(marked_pointset[i][0])
+            mk_y.append(marked_pointset[i][1])
+        plt.scatter(mk_x, mk_y, c = 'g', marker = '*')
+
     plt.show()
+
+def FunctionForClasswork():
+    """
+    对不同规模的数据统计快包算法的运行时间并绘制N-T表格和曲线图
+    """
+    n = 10
+    N = []
+    T = []
+    while n < 10000:
+        n = n * 2
+        a = GenerScatter(n)
+        a.sort(key = SortList)
+        cvxhu_point = [a[0], a[len(a)-1]]
+        first_line = GetLine(a[0], a[len(a)-1])
+        # 分为两个点集
+        po_set, neg_set = PointDivison(a, first_line, cvxhu_point)
+        # 作为凸包点集合
+        cvxhu_po = copy.copy(cvxhu_point)
+        cvxhu_neg = copy.copy(cvxhu_point)
+        # 作为基线经过点集合
+        cvxhu_po1 = copy.copy(cvxhu_point)
+        cvxhu_neg1 = copy.copy(cvxhu_point)
+        # 开始计时
+        time_start = time.time()
+        # 分别搜索两个点集中的凸包点
+        if len(po_set):
+            CvxSearchSm(po_set, cvxhu_po, cvxhu_po1)
+        if len(neg_set):
+            CvxSearchSm(neg_set, cvxhu_neg, cvxhu_neg1)
+        # 合并两个凸包点集合
+        cvxhu_point = list(set(cvxhu_po + cvxhu_neg))
+        #结束计时
+        time_end = time.time()
+
+        N.append(n)
+        T.append(time_end - time_start)
+
+    print('N:', N)
+    print('T:', T)
+    
+    plt.plot(N, T)
+    plt.title('N-T figure')
+    plt.xlabel('N')
+    plt.ylabel('T')
+    plt.show() 
 
 def main():
     
-    a = GenerScatter(100)
+    a = GenerScatter(20)
+    CvxVis(a)
     # 生成10个散点
     cvxhu_point = []
     # 按x轴排序
@@ -219,13 +276,17 @@ def main():
     cvxhu_po1 = copy.copy(cvxhu_point)
     cvxhu_neg1 = copy.copy(cvxhu_point)
     # 分别搜索两个点集中的凸包点
-    CvxSearchSm(po_set, cvxhu_po, cvxhu_po1)
-    CvxSearchSm(neg_set, cvxhu_neg, cvxhu_neg1)
+    CvxVis(a, point1 = a[0], point2 = a[len(a)-1], marked_pointset = po_set)
+    if len(po_set):
+        CvxSearchSm(po_set, cvxhu_po, cvxhu_po1)
+    CvxVis(a, point1 = a[0], point2 = a[len(a)-1], marked_pointset = neg_set)
+    if len(neg_set):
+        CvxSearchSm(neg_set, cvxhu_neg, cvxhu_neg1)
     # 合并两个凸包点集合
     cvxhu_point = list(set(cvxhu_po + cvxhu_neg))
     print(cvxhu_point)
     CvxVis(a, cvxhu_point)       
-
+    # FunctionForClasswork()
 
 
 if __name__ == "__main__":
