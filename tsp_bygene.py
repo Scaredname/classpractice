@@ -4,12 +4,13 @@
 tsp问题的遗传算法
 Author:MokeyDChaos
 Date:2019-04-10
-Version:2.0
+Version:3.0
 """
 import random
 import copy
 import math
 import matplotlib.pyplot as plt
+import itertools
 
 def GenerateCity(n):
     """
@@ -202,7 +203,7 @@ def Roulette(score, n, repeat = True):
                 continue    
     return pos
 
-def UpdateRace(race, dis):
+def UpdateRace(race, dis, best_score):
     """
     通过变异交叉等方式，产生新的种群
     @race:种群
@@ -211,11 +212,13 @@ def UpdateRace(race, dis):
     """
     score = []
     new_race = []
+    best_score_set = best_score
     n_score = []
     for i in range(len(race)):
         score.append(FitnessFunction(race[i],dis))
     # 我们想把适应度最大的直接保留到新种群中
-    new_race.append(race[score.index(max(score))]) 
+    new_race.append(race[score.index(max(score))])
+    best_score_set.append(max(score)) 
     # 先交叉，我希望适应度越低的越容易交叉
     race_size = len(race)
     while True:
@@ -237,7 +240,7 @@ def UpdateRace(race, dis):
     for each in var_pos:
         GeneVar(new_race[each])
 
-    return new_race
+    return new_race, best_score
 
 def TwoExNeigh(best_individual, best_individual_fitness, n, dis):
     """
@@ -290,30 +293,48 @@ def main():
     # dis = [[0, 1125, 5513, 15041, 980, 28565, 754, 34, 37577, 10397], [1125, 0, 10676, 19652, 4121, 36260, 1873, 1297, 47048, 16976], [5513, 10676, 0, 4640, 3637, 10312, 8665, 4825, 15188, 772], [15041, 19652, 4640, 0, 14845, 2824, 21905, 13649, 6660, 3316], [980, 4121, 3637, 14845, 0, 26073, 1258, 986, 33685, 7569], [28565, 36260, 10312, 2824, 26073, 0, 36901, 26693, 820, 6084], [754, 1873, 8665, 21905, 1258, 36901, 0, 1088, 46517, 14545], [34, 1297, 4825, 13649, 986, 26693, 1088, 0, 35477, 9425], [37577, 47048, 15188, 6660, 33685, 820, 46517, 35477, 0, 9448], [10397, 16976, 772, 3316, 7569, 6084, 14545, 9425, 9448, 0]]
     # city_map = [(67, -67), (100, -61), (0, -35), (-4, 33), (39, -81), (-54, 51), (72, -94), (64, -62), (-82, 57), (-24, -21)]
     race = GenerateRace(100, len(dis))
-    generation = 0
+    best_score = []
+    last_appro_min_dis = 0
+    i = 0
     while True:
-        generation = generation + 1
-        race = UpdateRace(race, dis)
-        if generation == 10000:
-            race_final = race
-            break
+        # 对同一个tsp问题计算多次
+        best_score = []
+        while True:
+            # 一次计算
+            race, best_score = UpdateRace(race, dis, best_score)
+            repeat_num = [len(list(v)) for k,v in itertools.groupby(best_score)]
+            # 取最近的一次进化重复次数
+            no_evo_generation = repeat_num[len(repeat_num) - 1] 
+            # 当同一个路径长度重复出现几次后停止迭代
+            if no_evo_generation == 20:
+                race_final = race
+                break
+            else:
+                continue
+        temp_score = FitnessScore(race_final, dis)
+        best_one =  race_final[temp_score.index(max(temp_score))]
+        appro_min_dis = math.sqrt(max(max(dis)) * len(race_final[0]) - max(temp_score))
+        print(best_one, '长度：', appro_min_dis)
+        if last_appro_min_dis == appro_min_dis:
+            i = i + 1
         else:
-            continue
-    temp_score = FitnessScore(race_final, dis)
-    best_one =  race_final[temp_score.index(max(temp_score))]
-    appro_min_dis = math.sqrt(max(max(dis)) * len(race_final[0]) - max(temp_score))
-    print(best_one, '长度：', appro_min_dis)
+            last_appro_min_dis = appro_min_dis
+            i = 0
+        # 如果连续3次对这个tsp问题的最优解都相同，就推出循环，视为寻找到了近似解
+        if i == 5:
+            break
+
     PathVisible(best_one, city_map)
-    
-    ne_area, ne_area_score = TwoExNeigh(best_one, max(temp_score), 1000, dis)
-    print('通过二交换得到的长度为', ne_area_score)
-    if len(ne_area) != 0:
-        print('进行二交换')
-        temp_index = ne_area_score.index(min(ne_area_score))
-        print('index', temp_index)
-        print('path', ne_area[temp_index])
-        PathVisible(ne_area[temp_index], city_map)
-    
+        
+        # ne_area, ne_area_score = TwoExNeigh(best_one, max(temp_score), 1000, dis)
+        # print('通过二交换得到的长度为', ne_area_score)
+        # if len(ne_area) != 0:
+        #     print('进行二交换')
+        #     temp_index = ne_area_score.index(min(ne_area_score))
+        #     print('index', temp_index)
+        #     print('path', ne_area[temp_index])
+            # PathVisible(ne_area[temp_index], city_map)
+        
 
 if __name__ == "__main__":
     main()
