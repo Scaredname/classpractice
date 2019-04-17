@@ -3,7 +3,7 @@
 """
 tsp问题的遗传算法
 Author:MokeyDChaos
-Date:2019-04-10
+Date:2019-04-17
 Version:3.0
 """
 import random
