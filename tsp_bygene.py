@@ -3,14 +3,15 @@
 """
 tsp问题的遗传算法
 Author:MokeyDChaos
-Date:2019-04-19
-Version:3.1
+Date:2019-04-25
+Version:4.0
 """
 import random
 import copy
 import math
 import matplotlib.pyplot as plt
 import itertools
+import pysnooper
 
 def GenerateCity(n):
     """
@@ -56,6 +57,7 @@ def GenerateRace(m, n):
     
     return race
 
+
 def FitnessFunction(individual, dis):
     """
     计算个体的适应度
@@ -66,6 +68,7 @@ def FitnessFunction(individual, dis):
     sum_dis = 0
     for i in range(len(individual) - 1):
         sum_dis = sum_dis + dis[individual[i]][individual[i+1]]
+    sum_dis = sum_dis + dis[individual[len(individual) - 1]][individual[0]]
     # 在tsp问题中我们希望路径越短越好，遗传算法中希望适应度越高越好，所以应该是路径越小适应度越高
     # 所以我用两个max寻找城市间的近似最大距离*城市数目-路劲长度来表示适应度
     # 近似最大距离在生成城市图时相当于是一个定值
@@ -270,6 +273,7 @@ def TwoExNeigh(best_individual, best_individual_fitness, n, dis):
     
     return neigh_area, score_area
 
+# @pysnooper.snoop('D:\Study\研一\高级数据结构\path_vis.log')
 def PathVisible(individual, city):
     """
     将tsp问题可视化
@@ -282,17 +286,20 @@ def PathVisible(individual, city):
         city_x.append(city[each][0])
         city_y.append(city[each][1])
     
+    city_x.append(city[individual[0]][0])
+    city_y.append(city[individual[0]][1])
+    
     plt.scatter(city_x, city_y, c = 'r')
     plt.plot(city_x, city_y, c = 'b')
     plt.show()
 
-
+# @pysnooper.snoop()
 def main():
-    # dis, city_map = GenerateCity(10)
+    dis, city_map = GenerateCity(50)
     # print('max dis', max(max(dis)))
     # print('dis', dis, 'c_m', city_map)
-    dis = [[0, 1125, 5513, 15041, 980, 28565, 754, 34, 37577, 10397], [1125, 0, 10676, 19652, 4121, 36260, 1873, 1297, 47048, 16976], [5513, 10676, 0, 4640, 3637, 10312, 8665, 4825, 15188, 772], [15041, 19652, 4640, 0, 14845, 2824, 21905, 13649, 6660, 3316], [980, 4121, 3637, 14845, 0, 26073, 1258, 986, 33685, 7569], [28565, 36260, 10312, 2824, 26073, 0, 36901, 26693, 820, 6084], [754, 1873, 8665, 21905, 1258, 36901, 0, 1088, 46517, 14545], [34, 1297, 4825, 13649, 986, 26693, 1088, 0, 35477, 9425], [37577, 47048, 15188, 6660, 33685, 820, 46517, 35477, 0, 9448], [10397, 16976, 772, 3316, 7569, 6084, 14545, 9425, 9448, 0]]
-    city_map = [(67, -67), (100, -61), (0, -35), (-4, 33), (39, -81), (-54, 51), (72, -94), (64, -62), (-82, 57), (-24, -21)]
+    # dis = [[0, 1125, 5513, 15041, 980, 28565, 754, 34, 37577, 10397], [1125, 0, 10676, 19652, 4121, 36260, 1873, 1297, 47048, 16976], [5513, 10676, 0, 4640, 3637, 10312, 8665, 4825, 15188, 772], [15041, 19652, 4640, 0, 14845, 2824, 21905, 13649, 6660, 3316], [980, 4121, 3637, 14845, 0, 26073, 1258, 986, 33685, 7569], [28565, 36260, 10312, 2824, 26073, 0, 36901, 26693, 820, 6084], [754, 1873, 8665, 21905, 1258, 36901, 0, 1088, 46517, 14545], [34, 1297, 4825, 13649, 986, 26693, 1088, 0, 35477, 9425], [37577, 47048, 15188, 6660, 33685, 820, 46517, 35477, 0, 9448], [10397, 16976, 772, 3316, 7569, 6084, 14545, 9425, 9448, 0]]
+    # city_map = [(67, -67), (100, -61), (0, -35), (-4, 33), (39, -81), (-54, 51), (72, -94), (64, -62), (-82, 57), (-24, -21)]
     race = GenerateRace(100, len(dis))
     best_score = []
     last_appro_min_dis = 0
